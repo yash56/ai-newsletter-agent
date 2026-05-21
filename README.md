@@ -10,6 +10,7 @@ A Python newsletter agent that reads trusted RSS feeds, asks Gemini to pick and 
 - Renders an HTML email from `templates/newsletter.html.j2`.
 - Sends one email per subscriber using the Resend Python SDK.
 - Reads API keys and runtime settings from environment variables.
+- Falls back to deterministic story ranking and excerpt-based summaries if Gemini returns malformed or empty output, so the newsletter can still send.
 
 ## Setup
 
@@ -101,11 +102,20 @@ The app keeps Gemini usage bounded by default:
 
 - Uses `gemini-3.5-flash` unless `GEMINI_MODEL` is changed.
 - Sends at most `MAX_CANDIDATES_FOR_AI=40` RSS candidates to Gemini.
-- Caps Gemini output with `GEMINI_MAX_OUTPUT_TOKENS=9600`.
-- Splits Gemini work into one small story-selection call and one small summary call per selected story to avoid truncated JSON.
+- Caps top-level Gemini output with `GEMINI_MAX_OUTPUT_TOKENS=9600`.
+- Uses `GEMINI_SUMMARY_OUTPUT_TOKENS=512` by default for per-story summaries.
+- Retries Gemini requests 3 times with a short backoff before falling back.
 - Runs once per day from GitHub Actions unless you manually trigger it.
 
-`gemini-3.5-flash` may use more quota than lower-cost Flash Lite models. These app settings reduce usage, but they do not hard-cap spending on the Google side. To restrict credit usage, keep billing disabled for the Gemini API project if you only want the free tier, or set project-level quotas/budgets in Google Cloud for the project attached to your API key.
+`gemini-3.5-flash` may use more quota than lower-cost Flash Lite models. These app settings reduce usage, but they do not hard-cap spending on the Google side. To restrict credit usage, keep billing disabled for the Gemini API project if you only want the free tier, or set project-level quotas or budgets in Google Cloud for the project attached to your API key.
+
+## Reliability notes
+
+The delivery path is designed to stay useful even when the model is flaky:
+
+- Gemini story selection falls back to deterministic keyword-based ranking if the model response is malformed or empty.
+- Gemini summaries fall back to excerpt-based two-sentence summaries when a story-level response is malformed or unavailable.
+- If Gemini becomes unavailable mid-run, the remaining stories use fallback summaries instead of failing the whole newsletter.
 
 ## Content controls
 
@@ -128,7 +138,9 @@ Optional:
 
 - `GEMINI_MODEL`: defaults to `gemini-3.5-flash`
 - `GEMINI_MAX_OUTPUT_TOKENS`: defaults to `9600`
-- `GEMINI_SUMMARY_OUTPUT_TOKENS`: defaults to `GEMINI_MAX_OUTPUT_TOKENS`
+- `GEMINI_SUMMARY_OUTPUT_TOKENS`: defaults to `512`
+- `GEMINI_RETRY_ATTEMPTS`: defaults to `3`
+- `GEMINI_RETRY_DELAY_SECONDS`: defaults to `2`
 - `NEWSLETTER_TITLE`: defaults to `AI, Agents, and Product Brief`
 - `NEWSLETTER_SUBJECT`: defaults to `Today's AI, Agents, and Product Brief`
 - `NEWSLETTER_FOOTER_TEXT`: defaults to a subscriber thank-you message
@@ -148,3 +160,5 @@ Feed URLs can be overridden with:
 ## Notes
 
 Resend requires a verified sending domain for production sending. The script sends individual emails instead of one shared recipient list, so subscribers do not see each other's addresses.
+
+`feedparser` may occasionally warn about malformed markup in a feed, especially for The Batch. The script keeps going as long as it can still read usable entries from the feed.
