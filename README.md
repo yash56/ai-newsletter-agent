@@ -1,11 +1,11 @@
 # ai-newsletter-agent
 
-A Python newsletter agent that reads trusted RSS feeds, asks OpenAI to pick and summarize the top AI, agentic AI, and Product Management stories, renders a clean HTML email with Jinja2, and sends it to subscribers through Resend.
+A Python newsletter agent that reads trusted RSS feeds, asks Gemini to pick and summarize the top AI, agentic AI, and Product Management stories, renders a clean HTML email with Jinja2, and sends it to subscribers through Resend.
 
 ## What it does
 
 - Reads RSS feeds with `feedparser` from TechCrunch, Hacker News, MIT Technology Review, Lenny's Newsletter, and The Batch by DeepLearning.AI.
-- Uses the OpenAI API to pick exactly 8 relevant stories and write a two-sentence plain-English summary for each.
+- Uses the Gemini API to pick exactly 8 relevant stories and write a two-sentence plain-English summary for each.
 - Renders an HTML email from `templates/newsletter.html.j2`.
 - Sends one email per subscriber using the Resend Python SDK.
 - Reads API keys and runtime settings from environment variables.
@@ -39,7 +39,7 @@ A Python newsletter agent that reads trusted RSS feeds, asks OpenAI to pick and 
 
    Then fill in:
 
-   - `OPENAI_API_KEY`
+   - `GEMINI_API_KEY`
    - `RESEND_API_KEY`
    - `RESEND_FROM_EMAIL`
 
@@ -80,7 +80,7 @@ The workflow in `.github/workflows/send-newsletter.yml` runs every day at 8:00 A
 
 Add these repository secrets under GitHub repo settings, then `Secrets and variables`, then `Actions`:
 
-- `OPENAI_API_KEY`
+- `GEMINI_API_KEY`
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 - `NEWSLETTER_SUBSCRIBERS_CSV`
@@ -94,21 +94,34 @@ reader@example.com,Example Reader
 
 You can also run the workflow manually from the GitHub Actions tab with `workflow_dispatch`.
 
+## Usage controls
+
+The app keeps Gemini usage small by default:
+
+- Uses `gemini-2.5-flash-lite` unless `GEMINI_MODEL` is changed.
+- Sends at most `MAX_CANDIDATES_FOR_AI=40` RSS candidates to Gemini.
+- Caps Gemini output with `GEMINI_MAX_OUTPUT_TOKENS=1600`.
+- Runs once per day from GitHub Actions unless you manually trigger it.
+
+These app settings reduce usage, but they do not hard-cap spending on the Google side. To restrict credit usage, keep billing disabled for the Gemini API project if you only want the free tier, or set project-level quotas/budgets in Google Cloud for the project attached to your API key.
+
 ## Environment variables
 
 Required:
 
-- `OPENAI_API_KEY`
+- `GEMINI_API_KEY`
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 
 Optional:
 
-- `OPENAI_MODEL`: defaults to `gpt-4o-mini`
+- `GEMINI_MODEL`: defaults to `gemini-2.5-flash-lite`
+- `GEMINI_MAX_OUTPUT_TOKENS`: defaults to `1600`
 - `NEWSLETTER_TITLE`: defaults to `AI, Agents, and Product Brief`
 - `NEWSLETTER_SUBJECT`: defaults to `Today's AI, Agents, and Product Brief`
 - `SUBSCRIBERS_CSV`: defaults to `subscribers.csv`
-- `MAX_ITEMS_PER_FEED`: defaults to `15`
+- `MAX_ITEMS_PER_FEED`: defaults to `10`
+- `MAX_CANDIDATES_FOR_AI`: defaults to `40`
 
 Feed URLs can be overridden with:
 
