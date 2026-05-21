@@ -177,11 +177,23 @@ def story_selection_schema() -> dict[str, Any]:
     }
 
 
+def parse_gemini_selection(response_text: str) -> dict[str, Any]:
+    try:
+        return json.loads(response_text)
+    except json.JSONDecodeError as exc:
+        preview = response_text[:300].replace("\n", " ")
+        raise RuntimeError(
+            "Gemini returned malformed JSON, likely because the response was truncated. "
+            "Increase GEMINI_MAX_OUTPUT_TOKENS if this happens again. "
+            f"Response preview: {preview!r}"
+        ) from exc
+
+
 def pick_top_stories(candidates: list[StoryCandidate]) -> list[NewsletterStory]:
     client = genai.Client(api_key=required_env("GEMINI_API_KEY"))
     model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
     max_candidates = int_env("MAX_CANDIDATES_FOR_AI", 40)
-    max_output_tokens = int_env("GEMINI_MAX_OUTPUT_TOKENS", 1600)
+    max_output_tokens = int_env("GEMINI_MAX_OUTPUT_TOKENS", 3200)
     max_stories_per_source = int_env("MAX_STORIES_PER_SOURCE", 2)
 
     candidate_payload = [
@@ -229,7 +241,7 @@ def pick_top_stories(candidates: list[StoryCandidate]) -> list[NewsletterStory]:
     if not response.text:
         raise RuntimeError("Gemini returned an empty response.")
 
-    parsed = json.loads(response.text)
+    parsed = parse_gemini_selection(response.text)
     selections = parsed.get("stories", [])
     if len(selections) != 8:
         raise RuntimeError(f"Gemini returned {len(selections)} stories; expected exactly 8.")
