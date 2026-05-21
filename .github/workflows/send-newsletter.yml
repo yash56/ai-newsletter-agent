@@ -1,0 +1,49 @@
+name: Send daily newsletter
+
+on:
+  schedule:
+    # 8:00 AM Indian Standard Time is 2:30 AM UTC.
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: send-daily-newsletter
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Create subscriber CSV
+        env:
+          NEWSLETTER_SUBSCRIBERS_CSV: ${{ secrets.NEWSLETTER_SUBSCRIBERS_CSV }}
+        run: |
+          if [ -z "$NEWSLETTER_SUBSCRIBERS_CSV" ]; then
+            echo "::error::Missing NEWSLETTER_SUBSCRIBERS_CSV secret. Add CSV content with an email column, for example: email,name"
+            exit 1
+          fi
+          printf '%s\n' "$NEWSLETTER_SUBSCRIBERS_CSV" > subscribers.csv
+
+      - name: Send newsletter
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          SUBSCRIBERS_CSV: subscribers.csv
+        run: python newsletter_agent.py
