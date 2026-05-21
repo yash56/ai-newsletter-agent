@@ -46,7 +46,7 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
           SUBSCRIBERS_CSV: subscribers.csv
-          GEMINI_MODEL: gemini-2.5-flash-lite
+          GEMINI_MODEL: gemini-3.5-flash
           GEMINI_MAX_OUTPUT_TOKENS: "1600"
           MAX_ITEMS_PER_FEED: "10"
           MAX_CANDIDATES_FOR_AI: "40"

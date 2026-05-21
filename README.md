@@ -96,14 +96,14 @@ You can also run the workflow manually from the GitHub Actions tab with `workflo
 
 ## Usage controls
 
-The app keeps Gemini usage small by default:
+The app keeps Gemini usage bounded by default:
 
-- Uses `gemini-2.5-flash-lite` unless `GEMINI_MODEL` is changed.
+- Uses `gemini-3.5-flash` unless `GEMINI_MODEL` is changed.
 - Sends at most `MAX_CANDIDATES_FOR_AI=40` RSS candidates to Gemini.
 - Caps Gemini output with `GEMINI_MAX_OUTPUT_TOKENS=1600`.
 - Runs once per day from GitHub Actions unless you manually trigger it.
 
-These app settings reduce usage, but they do not hard-cap spending on the Google side. To restrict credit usage, keep billing disabled for the Gemini API project if you only want the free tier, or set project-level quotas/budgets in Google Cloud for the project attached to your API key.
+`gemini-3.5-flash` may use more quota than lower-cost Flash Lite models. These app settings reduce usage, but they do not hard-cap spending on the Google side. To restrict credit usage, keep billing disabled for the Gemini API project if you only want the free tier, or set project-level quotas/budgets in Google Cloud for the project attached to your API key.
 
 ## Environment variables
 
@@ -115,7 +115,7 @@ Required:
 
 Optional:
 
-- `GEMINI_MODEL`: defaults to `gemini-2.5-flash-lite`
+- `GEMINI_MODEL`: defaults to `gemini-3.5-flash`
 - `GEMINI_MAX_OUTPUT_TOKENS`: defaults to `1600`
 - `NEWSLETTER_TITLE`: defaults to `AI, Agents, and Product Brief`
 - `NEWSLETTER_SUBJECT`: defaults to `Today's AI, Agents, and Product Brief`

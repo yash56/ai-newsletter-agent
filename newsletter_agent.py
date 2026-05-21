@@ -167,7 +167,7 @@ def story_selection_schema() -> dict[str, Any]:
 
 def pick_top_stories(candidates: list[StoryCandidate]) -> list[NewsletterStory]:
     client = genai.Client(api_key=required_env("GEMINI_API_KEY"))
-    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
     max_candidates = int_env("MAX_CANDIDATES_FOR_AI", 40)
     max_output_tokens = int_env("GEMINI_MAX_OUTPUT_TOKENS", 1600)
 
