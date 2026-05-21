@@ -6,6 +6,7 @@ A Python newsletter agent that reads trusted RSS feeds, asks Gemini to pick and 
 
 - Reads RSS feeds with `feedparser` from TechCrunch, Hacker News, MIT Technology Review, Lenny's Newsletter, and The Batch by DeepLearning.AI.
 - Uses the Gemini API to pick exactly 8 relevant stories and write a two-sentence plain-English summary for each.
+- Limits the newsletter to at most two stories from any one source.
 - Renders an HTML email from `templates/newsletter.html.j2`.
 - Sends one email per subscriber using the Resend Python SDK.
 - Reads API keys and runtime settings from environment variables.
@@ -105,6 +106,15 @@ The app keeps Gemini usage bounded by default:
 
 `gemini-3.5-flash` may use more quota than lower-cost Flash Lite models. These app settings reduce usage, but they do not hard-cap spending on the Google side. To restrict credit usage, keep billing disabled for the Gemini API project if you only want the free tier, or set project-level quotas/budgets in Google Cloud for the project attached to your API key.
 
+## Content controls
+
+The newsletter keeps a balanced mix of sources and clearer summaries by default:
+
+- `MAX_STORIES_PER_SOURCE`: defaults to `2`
+- `NEWSLETTER_FOOTER_TEXT`: defaults to a short subscriber thank-you and reply-for-issues note
+
+Each summary is prompted to explain what happened in the first sentence and why it matters in the second sentence.
+
 ## Environment variables
 
 Required:
@@ -119,9 +129,11 @@ Optional:
 - `GEMINI_MAX_OUTPUT_TOKENS`: defaults to `1600`
 - `NEWSLETTER_TITLE`: defaults to `AI, Agents, and Product Brief`
 - `NEWSLETTER_SUBJECT`: defaults to `Today's AI, Agents, and Product Brief`
+- `NEWSLETTER_FOOTER_TEXT`: defaults to a subscriber thank-you message
 - `SUBSCRIBERS_CSV`: defaults to `subscribers.csv`
 - `MAX_ITEMS_PER_FEED`: defaults to `10`
 - `MAX_CANDIDATES_FOR_AI`: defaults to `40`
+- `MAX_STORIES_PER_SOURCE`: defaults to `2`
 
 Feed URLs can be overridden with:
 
