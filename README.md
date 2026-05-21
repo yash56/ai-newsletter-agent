@@ -74,6 +74,26 @@ python newsletter_agent.py
 
 The agent sends the rendered newsletter to every valid email in `subscribers.csv`.
 
+## Daily GitHub Actions send
+
+The workflow in `.github/workflows/send-newsletter.yml` runs every day at 8:00 AM Indian Standard Time. GitHub schedules are written in UTC, so the cron expression is `30 2 * * *`.
+
+Add these repository secrets under GitHub repo settings, then `Secrets and variables`, then `Actions`:
+
+- `OPENAI_API_KEY`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `NEWSLETTER_SUBSCRIBERS_CSV`
+
+Set `NEWSLETTER_SUBSCRIBERS_CSV` to the full CSV content, including the header:
+
+```csv
+email,name
+reader@example.com,Example Reader
+```
+
+You can also run the workflow manually from the GitHub Actions tab with `workflow_dispatch`.
+
 ## Environment variables
 
 Required:
