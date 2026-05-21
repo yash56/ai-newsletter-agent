@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f6f7f9;color:#1d2433;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f7f9;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+            <tr>
+              <td style="padding:28px 28px 20px 28px;background:#111827;color:#ffffff;">
+                <div style="font-size:13px;line-height:18px;color:#cbd5e1;">{{ generated_on }}</div>
+                <h1 style="margin:8px 0 0 0;font-size:28px;line-height:34px;font-weight:700;">{{ title }}</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 28px 28px 28px;">
+                {% for story in stories %}
+                <article style="padding:22px 0;border-bottom:1px solid #edf0f4;">
+                  <div style="margin-bottom:8px;font-size:12px;line-height:18px;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;font-weight:700;">{{ story.source }}</div>
+                  <h2 style="margin:0 0 10px 0;font-size:20px;line-height:27px;color:#111827;">{{ story.title }}</h2>
+                  <p style="margin:0 0 14px 0;font-size:15px;line-height:24px;color:#374151;">{{ story.summary }}</p>
+                  <a href="{{ story.link }}" style="display:inline-block;color:#2563eb;font-size:15px;line-height:22px;font-weight:700;text-decoration:none;">Read more</a>
+                </article>
+                {% endfor %}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 28px 24px 28px;background:#f9fafb;color:#6b7280;font-size:12px;line-height:18px;">
+                Curated from RSS feeds and summarized for busy builders.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
