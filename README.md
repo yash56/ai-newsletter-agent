@@ -101,7 +101,8 @@ The app keeps Gemini usage bounded by default:
 
 - Uses `gemini-3.5-flash` unless `GEMINI_MODEL` is changed.
 - Sends at most `MAX_CANDIDATES_FOR_AI=40` RSS candidates to Gemini.
-- Caps Gemini output with `GEMINI_MAX_OUTPUT_TOKENS=3200`.
+- Caps Gemini output with `GEMINI_MAX_OUTPUT_TOKENS=9600`.
+- Splits Gemini work into one small story-selection call and one small summary call per selected story to avoid truncated JSON.
 - Runs once per day from GitHub Actions unless you manually trigger it.
 
 `gemini-3.5-flash` may use more quota than lower-cost Flash Lite models. These app settings reduce usage, but they do not hard-cap spending on the Google side. To restrict credit usage, keep billing disabled for the Gemini API project if you only want the free tier, or set project-level quotas/budgets in Google Cloud for the project attached to your API key.
@@ -126,7 +127,8 @@ Required:
 Optional:
 
 - `GEMINI_MODEL`: defaults to `gemini-3.5-flash`
-- `GEMINI_MAX_OUTPUT_TOKENS`: defaults to `3200`
+- `GEMINI_MAX_OUTPUT_TOKENS`: defaults to `9600`
+- `GEMINI_SUMMARY_OUTPUT_TOKENS`: defaults to `GEMINI_MAX_OUTPUT_TOKENS`
 - `NEWSLETTER_TITLE`: defaults to `AI, Agents, and Product Brief`
 - `NEWSLETTER_SUBJECT`: defaults to `Today's AI, Agents, and Product Brief`
 - `NEWSLETTER_FOOTER_TEXT`: defaults to a subscriber thank-you message
