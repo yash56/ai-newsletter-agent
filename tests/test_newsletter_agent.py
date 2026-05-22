@@ -2,11 +2,14 @@ import unittest
 from collections import Counter
 
 from newsletter_agent import (
+    NewsletterStory,
     StoryCandidate,
     clean_summary_text,
     fallback_select_story_ids,
     fallback_summary,
     parse_story_ids_from_text,
+    remove_rss_noise,
+    render_text_email,
     split_sentences,
 )
 
@@ -110,9 +113,39 @@ class NewsletterAgentTests(unittest.TestCase):
         summary = clean_summary_text("First sentence. Second sentence. Third sentence.")
         self.assertEqual(summary, "First sentence. Second sentence.")
 
-    def test_fallback_summary_returns_two_sentences(self) -> None:
-        summary = fallback_summary(self.candidates[0])
+    def test_remove_rss_noise_strips_promotional_prefixes(self) -> None:
+        cleaned = remove_rss_noise(
+            "Watch now | Ryan shows how to automate standups and ship PRs from one comment."
+        )
+        self.assertNotIn("Watch now", cleaned)
+        self.assertEqual(cleaned, "Ryan shows how to automate standups and ship PRs from one comment")
+
+    def test_fallback_summary_returns_simple_two_sentence_copy(self) -> None:
+        story = make_story(
+            11,
+            "Lenny's Newsletter",
+            "Spec-driven development at Notion",
+            "Watch now | Ryan Nystrom shows how Notion uses specs to guide AI coding work.",
+        )
+        summary = fallback_summary(story)
         self.assertGreaterEqual(len(split_sentences(summary)), 2)
+        self.assertNotIn("reports:", summary)
+        self.assertNotIn("Watch now", summary)
+
+    def test_text_email_uses_new_default_title_and_description(self) -> None:
+        text_email = render_text_email(
+            [
+                NewsletterStory(
+                    source="TechCrunch",
+                    title="AI product update",
+                    link="https://example.com/ai-product-update",
+                    published="2026-05-22",
+                    summary="A company launched a clearer AI product workflow. This helps teams understand what changed and why it matters.",
+                )
+            ]
+        )
+        self.assertIn("The AI Signal Brief", text_email)
+        self.assertIn("A simple daily briefing", text_email)
 
 
 if __name__ == "__main__":

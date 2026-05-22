@@ -122,9 +122,12 @@ The delivery path is designed to stay useful even when the model is flaky:
 The newsletter keeps a balanced mix of sources and clearer summaries by default:
 
 - `MAX_STORIES_PER_SOURCE`: defaults to `2`
+- `NEWSLETTER_TITLE`: defaults to `The AI Signal Brief`
+- `NEWSLETTER_SUBJECT`: defaults to `Today's AI Signal Brief`
+- `NEWSLETTER_DESCRIPTION`: defaults to a short explanation of what the briefing covers
 - `NEWSLETTER_FOOTER_TEXT`: defaults to a short subscriber thank-you and reply-for-issues note
 
-Each summary is prompted to explain what happened in the first sentence and why it matters in the second sentence.
+Each Gemini summary is prompted to use two short, simple sentences: the first explains the latest news clearly, and the second explains why it matters in practical terms. Fallback summaries also remove common RSS noise like watch/listen/read prompts before using article excerpts.
 
 ## Environment variables
 
@@ -141,8 +144,9 @@ Optional:
 - `GEMINI_SUMMARY_OUTPUT_TOKENS`: defaults to `512`
 - `GEMINI_RETRY_ATTEMPTS`: defaults to `3`
 - `GEMINI_RETRY_DELAY_SECONDS`: defaults to `2`
-- `NEWSLETTER_TITLE`: defaults to `AI, Agents, and Product Brief`
-- `NEWSLETTER_SUBJECT`: defaults to `Today's AI, Agents, and Product Brief`
+- `NEWSLETTER_TITLE`: defaults to `The AI Signal Brief`
+- `NEWSLETTER_SUBJECT`: defaults to `Today's AI Signal Brief`
+- `NEWSLETTER_DESCRIPTION`: defaults to `A simple daily briefing on the AI, agents, and product moves worth knowing.`
 - `NEWSLETTER_FOOTER_TEXT`: defaults to a subscriber thank-you message
 - `SUBSCRIBERS_CSV`: defaults to `subscribers.csv`
 - `MAX_ITEMS_PER_FEED`: defaults to `10`
