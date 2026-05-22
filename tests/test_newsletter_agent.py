@@ -2,6 +2,7 @@ import unittest
 from collections import Counter
 
 from newsletter_agent import (
+    NewsletterStory,
     StoryCandidate,
     clean_summary_text,
     fallback_select_story_ids,
@@ -132,16 +133,14 @@ class NewsletterAgentTests(unittest.TestCase):
         self.assertNotIn("Watch now", summary)
 
     def test_text_email_uses_new_default_title_and_description(self) -> None:
-        story = make_story(11, "TechCrunch", "AI product update", "Teams get a clearer launch path.")
         text_email = render_text_email(
             [
-                story.__class__(
-                    id=story.id,
-                    source=story.source,
-                    title=story.title,
-                    link=story.link,
-                    published=story.published,
-                    excerpt=story.excerpt,
+                NewsletterStory(
+                    source="TechCrunch",
+                    title="AI product update",
+                    link="https://example.com/ai-product-update",
+                    published="2026-05-22",
+                    summary="A company launched a clearer AI product workflow. This helps teams understand what changed and why it matters.",
                 )
             ]
         )
