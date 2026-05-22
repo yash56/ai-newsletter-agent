@@ -144,8 +144,8 @@ class NewsletterAgentTests(unittest.TestCase):
                 )
             ]
         )
-        self.assertIn("The AI Signal Brief", text_email)
-        self.assertIn("A simple daily briefing", text_email)
+        self.assertIn("Daily TAP Brief", text_email)
+        self.assertIn("Tech · AI · Product", text_email)
 
 
 if __name__ == "__main__":

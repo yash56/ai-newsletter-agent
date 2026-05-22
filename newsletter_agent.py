@@ -27,11 +27,9 @@ except ImportError:  # pragma: no cover - python-dotenv is optional at runtime.
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATE_DIR = BASE_DIR / "templates"
-DEFAULT_NEWSLETTER_TITLE = "The AI Signal Brief"
-DEFAULT_NEWSLETTER_SUBJECT = "Today's AI Signal Brief"
-DEFAULT_NEWSLETTER_DESCRIPTION = (
-    "A simple daily briefing on the AI, agents, and product moves worth knowing."
-)
+DEFAULT_NEWSLETTER_TITLE = "Daily TAP Brief"
+DEFAULT_NEWSLETTER_SUBJECT = "Daily TAP Brief: Tech, AI, Product"
+DEFAULT_NEWSLETTER_DESCRIPTION = "Tech · AI · Product, explained simply every morning."
 DEFAULT_FOOTER_TEXT = (
     "Thank you for subscribing to the newsletter. If you run into any issues or "
     "have feedback, please reply to this email."
