@@ -109,16 +109,26 @@ class NewsletterAgentTests(unittest.TestCase):
         counts = Counter(story.source for story in self.candidates if story.id in ids)
         self.assertTrue(all(count <= 2 for count in counts.values()))
 
-    def test_clean_summary_text_keeps_first_two_sentences(self) -> None:
-        summary = clean_summary_text("First sentence. Second sentence. Third sentence.")
-        self.assertEqual(summary, "First sentence. Second sentence.")
+    def test_clean_summary_text_keeps_first_two_complete_sentences(self) -> None:
+        summary = clean_summary_text("First sentence is clear. Second sentence is useful. Third sentence is extra.")
+        self.assertEqual(summary, "First sentence is clear. Second sentence is useful.")
+
+    def test_clean_summary_text_rejects_incomplete_sentence(self) -> None:
+        summary = clean_summary_text(
+            "Let's make it even more practical. For product managers and builders, this means preparing for"
+        )
+        self.assertEqual(summary, "")
 
     def test_remove_rss_noise_strips_promotional_prefixes(self) -> None:
         cleaned = remove_rss_noise(
             "Watch now | Ryan shows how to automate standups and ship PRs from one comment."
         )
         self.assertNotIn("Watch now", cleaned)
-        self.assertEqual(cleaned, "Ryan shows how to automate standups and ship PRs from one comment")
+        self.assertEqual(cleaned, "Ryan shows how to automate standups and ship PRs from one comment.")
+
+    def test_remove_rss_noise_strips_hacker_news_comments(self) -> None:
+        self.assertEqual(remove_rss_noise("Comments"), "")
+        self.assertEqual(remove_rss_noise("Comments."), "")
 
     def test_fallback_summary_returns_simple_two_sentence_copy(self) -> None:
         story = make_story(
@@ -132,6 +142,17 @@ class NewsletterAgentTests(unittest.TestCase):
         self.assertNotIn("reports:", summary)
         self.assertNotIn("Watch now", summary)
 
+    def test_fallback_summary_does_not_emit_comments(self) -> None:
+        story = make_story(
+            12,
+            "Hacker News",
+            "Microsoft reports AI is more expensive than paying human employees",
+            "Comments",
+        )
+        summary = fallback_summary(story)
+        self.assertGreaterEqual(len(split_sentences(summary)), 2)
+        self.assertNotIn("Comments", summary)
+
     def test_text_email_uses_new_default_title_and_description(self) -> None:
         text_email = render_text_email(
             [
@@ -144,8 +165,8 @@ class NewsletterAgentTests(unittest.TestCase):
                 )
             ]
         )
-        self.assertIn("Daily TAP Brief", text_email)
-        self.assertIn("Tech · AI · Product", text_email)
+        self.assertIn("The TAP Brief", text_email)
+        self.assertIn("Tech · AI · Product - Explained simply every morning!", text_email)
 
 
 if __name__ == "__main__":
