@@ -1,6 +1,6 @@
 # ai-newsletter-agent
 
-A Python newsletter agent that reads trusted RSS feeds, asks Gemini to pick and summarize the top AI, agentic AI, and Product Management stories, renders a clean HTML email with Jinja2, and sends it to subscribers through Resend.
+A Python newsletter agent that reads trusted RSS feeds, asks Gemini to pick and summarize the top Tech, AI, and Product stories, renders a clean HTML email with Jinja2, and sends it to subscribers through Resend.
 
 ## What it does
 
@@ -103,7 +103,7 @@ The app keeps Gemini usage bounded by default:
 - Uses `gemini-3.5-flash` unless `GEMINI_MODEL` is changed.
 - Sends at most `MAX_CANDIDATES_FOR_AI=40` RSS candidates to Gemini.
 - Caps top-level Gemini output with `GEMINI_MAX_OUTPUT_TOKENS=9600`.
-- Uses `GEMINI_SUMMARY_OUTPUT_TOKENS=512` by default for per-story summaries.
+- Uses `GEMINI_SUMMARY_OUTPUT_TOKENS=768` by default for per-story summaries.
 - Retries Gemini requests 3 times with a short backoff before falling back.
 - Runs once per day from GitHub Actions unless you manually trigger it.
 
@@ -122,12 +122,12 @@ The delivery path is designed to stay useful even when the model is flaky:
 The newsletter keeps a balanced mix of sources and clearer summaries by default:
 
 - `MAX_STORIES_PER_SOURCE`: defaults to `2`
-- `NEWSLETTER_TITLE`: defaults to `Daily TAP Brief`
-- `NEWSLETTER_SUBJECT`: defaults to `Daily TAP Brief: Tech, AI, Product`
-- `NEWSLETTER_DESCRIPTION`: defaults to `Tech · AI · Product, explained simply every morning.`
+- `NEWSLETTER_TITLE`: defaults to `The TAP Brief`
+- `NEWSLETTER_SUBJECT`: defaults to `The TAP Brief: Tech, AI, Product`
+- `NEWSLETTER_DESCRIPTION`: defaults to `Tech · AI · Product - Explained simply every morning!`
 - `NEWSLETTER_FOOTER_TEXT`: defaults to a short subscriber thank-you and reply-for-issues note
 
-Each Gemini summary is prompted to use two short, simple sentences: the first explains the latest news clearly, and the second explains why it matters in practical terms. Fallback summaries also remove common RSS noise like watch/listen/read prompts before using article excerpts.
+Each Gemini summary is prompted to use two complete, short, simple sentences: the first explains the latest news clearly, and the second explains why it matters in practical terms. The agent rejects incomplete summaries, removes common RSS noise like watch/listen/read prompts, and strips confusing Hacker News placeholders such as `Comments` before rendering the email.
 
 ## Environment variables
 
@@ -141,12 +141,12 @@ Optional:
 
 - `GEMINI_MODEL`: defaults to `gemini-3.5-flash`
 - `GEMINI_MAX_OUTPUT_TOKENS`: defaults to `9600`
-- `GEMINI_SUMMARY_OUTPUT_TOKENS`: defaults to `512`
+- `GEMINI_SUMMARY_OUTPUT_TOKENS`: defaults to `768`
 - `GEMINI_RETRY_ATTEMPTS`: defaults to `3`
 - `GEMINI_RETRY_DELAY_SECONDS`: defaults to `2`
-- `NEWSLETTER_TITLE`: defaults to `Daily TAP Brief`
-- `NEWSLETTER_SUBJECT`: defaults to `Daily TAP Brief: Tech, AI, Product`
-- `NEWSLETTER_DESCRIPTION`: defaults to `Tech · AI · Product, explained simply every morning.`
+- `NEWSLETTER_TITLE`: defaults to `The TAP Brief`
+- `NEWSLETTER_SUBJECT`: defaults to `The TAP Brief: Tech, AI, Product`
+- `NEWSLETTER_DESCRIPTION`: defaults to `Tech · AI · Product - Explained simply every morning!`
 - `NEWSLETTER_FOOTER_TEXT`: defaults to a subscriber thank-you message
 - `SUBSCRIBERS_CSV`: defaults to `subscribers.csv`
 - `MAX_ITEMS_PER_FEED`: defaults to `10`
