@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 newsletter_preview.html
 subscribers.csv
+sent_history.json
