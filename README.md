@@ -1,16 +1,17 @@
 # ai-newsletter-agent
 
-A Python newsletter agent that reads trusted RSS feeds, asks Gemini to pick and summarize the top Tech, AI, and Product stories, renders a clean HTML email with Jinja2, and sends it to subscribers through Resend.
+A Python newsletter agent that reads trusted RSS feeds, asks Gemini to pick and summarize fresh Tech, AI, and Product stories, renders a clean HTML email with Jinja2, and sends it to subscribers through Resend.
 
 ## What it does
 
 - Reads RSS feeds with `feedparser` from TechCrunch, Hacker News, MIT Technology Review, Lenny's Newsletter, and The Batch by DeepLearning.AI.
-- Uses the Gemini API to pick exactly 8 relevant stories and write a two-sentence plain-English summary for each.
+- Uses the Gemini API to pick up to 8 relevant fresh stories and write a two-sentence plain-English summary for each.
+- Filters stories to the last 24 hours by default, then skips links that were already sent.
 - Limits the newsletter to at most two stories from any one source.
 - Renders an HTML email from `templates/newsletter.html.j2`.
 - Sends one email per subscriber using the Resend Python SDK.
 - Reads API keys and runtime settings from environment variables.
-- Falls back to deterministic story ranking and excerpt-based summaries if Gemini returns malformed or empty output, so the newsletter can still send.
+- Falls back to deterministic story ranking and excerpt-based summaries if Gemini returns malformed or empty output.
 
 ## Setup
 
@@ -60,10 +61,10 @@ A Python newsletter agent that reads trusted RSS feeds, asks Gemini to pick and 
 
 ## Run a preview
 
-Generate the newsletter HTML without sending email:
+Generate the fresh newsletter HTML without sending email:
 
 ```bash
-python newsletter_agent.py --dry-run
+python fresh_newsletter_agent.py --dry-run
 ```
 
 This writes `newsletter_preview.html`.
@@ -71,7 +72,7 @@ This writes `newsletter_preview.html`.
 ## Send the newsletter
 
 ```bash
-python newsletter_agent.py
+python fresh_newsletter_agent.py
 ```
 
 The agent sends the rendered newsletter to every valid email in `subscribers.csv`.
@@ -95,6 +96,17 @@ reader@example.com,Example Reader
 ```
 
 You can also run the workflow manually from the GitHub Actions tab with `workflow_dispatch`.
+
+## Freshness and repeat protection
+
+The daily workflow uses `fresh_newsletter_agent.py`, which applies two protections before Gemini picks the stories:
+
+- `MAX_STORY_AGE_HOURS=24` keeps the newsletter focused on stories from the last 24 hours.
+- `sent_history.json` records article link fingerprints after a successful send, so the next run skips links that were already emailed.
+
+In GitHub Actions, `sent_history.json` is restored and saved through `actions/cache@v5`. The file contains article links and dates only. It does not contain API keys, subscriber emails, or message content.
+
+If there are fewer than 8 fresh, unsent stories, the newsletter sends fewer stories instead of filling the email with old repeats. By default it needs at least `MIN_STORIES_TO_SEND=3` selectable stories.
 
 ## Usage controls
 
@@ -152,6 +164,12 @@ Optional:
 - `MAX_ITEMS_PER_FEED`: defaults to `10`
 - `MAX_CANDIDATES_FOR_AI`: defaults to `40`
 - `MAX_STORIES_PER_SOURCE`: defaults to `2`
+- `NEWSLETTER_STORY_COUNT`: defaults to `8`
+- `MAX_STORY_AGE_HOURS`: defaults to `24`
+- `MIN_STORIES_TO_SEND`: defaults to `3`
+- `SENT_HISTORY_FILE`: defaults to `sent_history.json`
+- `SENT_HISTORY_DAYS`: defaults to `45`
+- `INCLUDE_UNDATED_STORIES`: defaults to `false`
 
 Feed URLs can be overridden with:
 
