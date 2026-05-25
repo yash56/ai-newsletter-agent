@@ -7,6 +7,7 @@ A Python newsletter agent that reads trusted RSS feeds, asks Gemini to pick and 
 - Reads RSS feeds with `feedparser` from TechCrunch, Hacker News, MIT Technology Review, Lenny's Newsletter, and The Batch by DeepLearning.AI.
 - Uses the Gemini API to pick up to 8 relevant fresh stories and write a two-sentence plain-English summary for each.
 - Filters stories to the last 24 hours by default, then skips links that were already sent.
+- Applies a quality gate before Gemini selection, so weakly related or vague posts are less likely to appear.
 - Limits the newsletter to at most two stories from any one source.
 - Renders an HTML email from `templates/newsletter.html.j2`.
 - Sends one email per subscriber using the Resend Python SDK.
@@ -61,10 +62,10 @@ A Python newsletter agent that reads trusted RSS feeds, asks Gemini to pick and 
 
 ## Run a preview
 
-Generate the fresh newsletter HTML without sending email:
+Generate the quality-checked newsletter HTML without sending email:
 
 ```bash
-python fresh_newsletter_agent.py --dry-run
+python quality_newsletter_agent.py --dry-run
 ```
 
 This writes `newsletter_preview.html`.
@@ -72,7 +73,7 @@ This writes `newsletter_preview.html`.
 ## Send the newsletter
 
 ```bash
-python fresh_newsletter_agent.py
+python quality_newsletter_agent.py
 ```
 
 The agent sends the rendered newsletter to every valid email in `subscribers.csv`.
@@ -99,14 +100,15 @@ You can also run the workflow manually from the GitHub Actions tab with `workflo
 
 ## Freshness and repeat protection
 
-The daily workflow uses `fresh_newsletter_agent.py`, which applies two protections before Gemini picks the stories:
+The daily workflow uses `quality_newsletter_agent.py`, which applies three protections before Gemini picks the stories:
 
 - `MAX_STORY_AGE_HOURS=24` keeps the newsletter focused on stories from the last 24 hours.
 - `sent_history.json` records article link fingerprints after a successful send, so the next run skips links that were already emailed.
+- A quality gate removes weakly relevant posts before Gemini selection.
 
 In GitHub Actions, `sent_history.json` is restored and saved through `actions/cache@v5`. The file contains article links and dates only. It does not contain API keys, subscriber emails, or message content.
 
-If there are fewer than 8 fresh, unsent stories, the newsletter sends fewer stories instead of filling the email with old repeats. By default it needs at least `MIN_STORIES_TO_SEND=3` selectable stories.
+If there are fewer than 8 fresh, relevant, unsent stories, the newsletter sends fewer stories instead of filling the email with old or weak posts. By default it needs at least `MIN_STORIES_TO_SEND=3` selectable stories.
 
 ## Usage controls
 
@@ -134,10 +136,15 @@ The delivery path is designed to stay useful even when the model is flaky:
 The newsletter keeps a balanced mix of sources and clearer summaries by default:
 
 - `MAX_STORIES_PER_SOURCE`: defaults to `2`
+- `MIN_RELEVANCE_SCORE`: defaults to `10`
+- `HACKER_NEWS_MIN_RELEVANCE_SCORE`: defaults to `14`
+- `REQUIRE_CORE_RELEVANCE`: defaults to `true`
 - `NEWSLETTER_TITLE`: defaults to `The TAP Brief`
 - `NEWSLETTER_SUBJECT`: defaults to `The TAP Brief: Tech, AI, Product`
 - `NEWSLETTER_DESCRIPTION`: defaults to `Tech · AI · Product - Explained simply every morning!`
 - `NEWSLETTER_FOOTER_TEXT`: defaults to a short subscriber thank-you and reply-for-issues note
+
+The quality gate favors stories with a clear AI, agentic AI, technology, or Product Management angle. It rejects low-signal Hacker News patterns like `Ask HN` and raises the relevance threshold for Hacker News because those items often have thinner RSS context.
 
 Each Gemini summary is prompted to use two complete, short, simple sentences: the first explains the latest news clearly, and the second explains why it matters in practical terms. The agent rejects incomplete summaries, removes common RSS noise like watch/listen/read prompts, and strips confusing Hacker News placeholders such as `Comments` before rendering the email.
 
@@ -167,6 +174,9 @@ Optional:
 - `NEWSLETTER_STORY_COUNT`: defaults to `8`
 - `MAX_STORY_AGE_HOURS`: defaults to `24`
 - `MIN_STORIES_TO_SEND`: defaults to `3`
+- `MIN_RELEVANCE_SCORE`: defaults to `10`
+- `HACKER_NEWS_MIN_RELEVANCE_SCORE`: defaults to `14`
+- `REQUIRE_CORE_RELEVANCE`: defaults to `true`
 - `SENT_HISTORY_FILE`: defaults to `sent_history.json`
 - `SENT_HISTORY_DAYS`: defaults to `45`
 - `INCLUDE_UNDATED_STORIES`: defaults to `false`

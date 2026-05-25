@@ -65,6 +65,9 @@ jobs:
           NEWSLETTER_STORY_COUNT: "8"
           MAX_STORY_AGE_HOURS: "24"
           MIN_STORIES_TO_SEND: "3"
+          MIN_RELEVANCE_SCORE: "10"
+          HACKER_NEWS_MIN_RELEVANCE_SCORE: "14"
+          REQUIRE_CORE_RELEVANCE: "true"
           SENT_HISTORY_FILE: sent_history.json
           SENT_HISTORY_DAYS: "45"
-        run: python fresh_newsletter_agent.py
+        run: python quality_newsletter_agent.py
