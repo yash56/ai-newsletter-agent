@@ -52,6 +52,17 @@ class QualityNewsletterAgentTests(unittest.TestCase):
 
         self.assertEqual(filtered, [ai_story])
 
+    def test_filter_quality_stories_rejects_generic_business_model_news(self) -> None:
+        story = make_candidate(
+            1,
+            "TechCrunch",
+            "A startup changes its business model after layoffs",
+            "The company is trying a new pricing plan for enterprise customers.",
+        )
+
+        with patch.dict(os.environ, {"REQUIRE_CORE_RELEVANCE": "true"}, clear=False):
+            self.assertEqual(filter_quality_stories([story]), [])
+
     def test_filter_quality_stories_rejects_low_signal_hacker_news_prefixes(self) -> None:
         story = make_candidate(
             1,
