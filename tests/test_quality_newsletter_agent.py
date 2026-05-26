@@ -2,8 +2,15 @@ import os
 import unittest
 from unittest.mock import patch
 
-from newsletter_agent import StoryCandidate
-from quality_newsletter_agent import filter_quality_stories, has_core_relevance, quality_score
+import newsletter_agent as agent
+from newsletter_agent import NewsletterStory, StoryCandidate
+from quality_newsletter_agent import (
+    configure_quality_sources,
+    enhance_newsletter_stories,
+    filter_quality_stories,
+    has_core_relevance,
+    quality_score,
+)
 
 
 def make_candidate(
@@ -88,6 +95,27 @@ class QualityNewsletterAgentTests(unittest.TestCase):
         )
 
         self.assertGreater(quality_score(strong_story), quality_score(weak_story))
+
+    def test_configure_quality_sources_adds_official_ai_feeds(self) -> None:
+        configure_quality_sources()
+
+        self.assertIn("OpenAI News", agent.configured_feeds())
+        self.assertIn("Anthropic News", agent.configured_feeds())
+        self.assertIn("GitHub AI & ML", agent.configured_feeds())
+
+    def test_enhance_newsletter_stories_adds_category_and_cleans_title(self) -> None:
+        story = NewsletterStory(
+            source="Lenny's Newsletter",
+            title="Spec-driven development: The AI engineering workflow at Notion | Ryan Nystrom",
+            link="https://example.com/story",
+            published="2026-05-25",
+            summary="Notion uses Claude Code and AI agents to automate engineering workflows. This matters because product teams can move faster when specs and implementation stay connected.",
+        )
+
+        enhanced = enhance_newsletter_stories([story])
+
+        self.assertEqual(enhanced[0].title, "Spec-driven development: The AI engineering workflow at Notion")
+        self.assertEqual(enhanced[0].category, "Code & Tools")
 
 
 if __name__ == "__main__":
