@@ -2,10 +2,44 @@ from __future__ import annotations
 
 import argparse
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 import fresh_newsletter_agent as fresh
 import newsletter_agent as agent
+
+ENHANCED_FEEDS = {
+    "OpenAI News": "https://openai.com/news/rss.xml",
+    "Anthropic News": "https://www.anthropic.com/news/rss.xml",
+    "Google AI Blog": "https://blog.google/technology/ai/rss/",
+    "Google Cloud AI": "https://cloud.google.com/blog/products/rss",
+    "GitHub AI & ML": "https://github.blog/ai-and-ml/feed/",
+    "Microsoft Developer Blog": "https://devblogs.microsoft.com/feed/",
+    "The New Stack": "https://thenewstack.io/feed/",
+    "VentureBeat AI": "https://venturebeat.com/category/ai/feed/",
+}
+
+ENHANCED_FEED_ENV_OVERRIDES = {
+    "OpenAI News": "OPENAI_NEWS_RSS_URL",
+    "Anthropic News": "ANTHROPIC_NEWS_RSS_URL",
+    "Google AI Blog": "GOOGLE_AI_BLOG_RSS_URL",
+    "Google Cloud AI": "GOOGLE_CLOUD_AI_RSS_URL",
+    "GitHub AI & ML": "GITHUB_AI_RSS_URL",
+    "Microsoft Developer Blog": "MICROSOFT_DEV_BLOG_RSS_URL",
+    "The New Stack": "THE_NEW_STACK_RSS_URL",
+    "VentureBeat AI": "VENTUREBEAT_AI_RSS_URL",
+}
+
+ENHANCED_SOURCE_BONUSES = {
+    "OpenAI News": 5,
+    "Anthropic News": 5,
+    "Google AI Blog": 5,
+    "Google Cloud AI": 4,
+    "GitHub AI & ML": 4,
+    "Microsoft Developer Blog": 3,
+    "The New Stack": 3,
+    "VentureBeat AI": 3,
+}
 
 CORE_RELEVANCE_PHRASES = (
     "ai",
@@ -16,6 +50,8 @@ CORE_RELEVANCE_PHRASES = (
     "automation",
     "autonomous",
     "chatbot",
+    "claude",
+    "claude code",
     "copilot",
     "deep learning",
     "developer tool",
@@ -29,6 +65,8 @@ CORE_RELEVANCE_PHRASES = (
     "large language model",
     "llm",
     "machine learning",
+    "mcp",
+    "model context protocol",
     "multimodal",
     "openai",
     "product management",
@@ -36,9 +74,12 @@ CORE_RELEVANCE_PHRASES = (
     "product managers",
     "product strategy",
     "prompt",
+    "qwen",
     "reasoning",
     "roadmap",
+    "synthetic data",
     "user research",
+    "vertex ai",
 )
 
 LOW_SIGNAL_TITLE_PREFIXES = (
@@ -57,6 +98,98 @@ LOW_SIGNAL_PHRASES = (
     "poll:",
     "thread",
 )
+
+CATEGORY_RULES = (
+    (
+        "Research",
+        (
+            "benchmark",
+            "deepmind",
+            "paper",
+            "research",
+            "study",
+            "turing test",
+        ),
+    ),
+    (
+        "Code & Tools",
+        (
+            "api",
+            "claude code",
+            "copilot",
+            "developer",
+            "github",
+            "mcp",
+            "sdk",
+            "toolkit",
+            "vertex ai",
+        ),
+    ),
+    (
+        "Product Updates",
+        (
+            "announces",
+            "introducing",
+            "launch",
+            "model",
+            "product",
+            "qwen",
+            "release",
+            "update",
+        ),
+    ),
+    (
+        "Risk & Governance",
+        (
+            "compliance",
+            "governance",
+            "policy",
+            "regulation",
+            "risk",
+            "safety",
+            "security",
+            "vulnerability",
+        ),
+    ),
+    (
+        "Events",
+        (
+            "conference",
+            "event",
+            "summit",
+            "webinar",
+            "workshop",
+        ),
+    ),
+    (
+        "Product Thinking",
+        (
+            "customer",
+            "growth",
+            "pricing",
+            "product management",
+            "product manager",
+            "roadmap",
+            "user research",
+        ),
+    ),
+)
+
+
+@dataclass(frozen=True)
+class EnhancedNewsletterStory:
+    source: str
+    title: str
+    link: str
+    published: str
+    summary: str
+    category: str
+
+
+def configure_quality_sources() -> None:
+    agent.DEFAULT_FEEDS.update(ENHANCED_FEEDS)
+    agent.FEED_ENV_OVERRIDES.update(ENHANCED_FEED_ENV_OVERRIDES)
+    agent.SOURCE_BONUSES.update(ENHANCED_SOURCE_BONUSES)
 
 
 def story_text(story: agent.StoryCandidate) -> str:
@@ -83,6 +216,8 @@ def quality_score(story: agent.StoryCandidate) -> int:
     if has_core_relevance(story):
         score += 6
     if story.excerpt:
+        score += 2
+    if story.source in ENHANCED_SOURCE_BONUSES:
         score += 2
     if has_low_signal_title(story):
         score -= 8
@@ -128,8 +263,44 @@ def filter_quality_stories(candidates: list[agent.StoryCandidate]) -> list[agent
     return sorted(filtered, key=lambda story: (-quality_score(story), story.id))
 
 
+def clean_display_title(title: str) -> str:
+    cleaned = agent.remove_rss_noise(title)
+    if " | " in cleaned:
+        left, right = cleaned.rsplit(" | ", 1)
+        if 1 <= len(right.split()) <= 5:
+            cleaned = left
+    return cleaned.strip() or title
+
+
+def infer_category(story: agent.NewsletterStory) -> str:
+    text = f"{story.source} {story.title} {story.summary} {story.link}".lower()
+    if "youtube.com" in text or "youtu.be" in text:
+        return "Video"
+    if "spotify.com" in text or "podcast" in text:
+        return "Podcast"
+    for category, phrases in CATEGORY_RULES:
+        if any(agent.text_contains_phrase(text, phrase) for phrase in phrases):
+            return category
+    return "Highlights"
+
+
+def enhance_newsletter_stories(stories: list[agent.NewsletterStory]) -> list[EnhancedNewsletterStory]:
+    return [
+        EnhancedNewsletterStory(
+            source=story.source,
+            title=clean_display_title(story.title),
+            link=story.link,
+            published=story.published,
+            summary=story.summary,
+            category=infer_category(story),
+        )
+        for story in stories
+    ]
+
+
 def run(dry_run: bool = False, preview_file: Path | None = None) -> None:
     agent.load_environment()
+    configure_quality_sources()
     max_per_feed = agent.int_env("MAX_ITEMS_PER_FEED", 10)
     max_age_hours = agent.int_env("MAX_STORY_AGE_HOURS", 24)
     include_undated = fresh.bool_env("INCLUDE_UNDATED_STORIES", False)
@@ -151,7 +322,7 @@ def run(dry_run: bool = False, preview_file: Path | None = None) -> None:
             "No fresh, relevant, unsent stories were found. The newsletter was not sent to avoid low-quality filler."
         )
 
-    stories = fresh.pick_fresh_top_stories(quality_candidates)
+    stories = enhance_newsletter_stories(fresh.pick_fresh_top_stories(quality_candidates))
     html_body = agent.render_newsletter(stories)
 
     if dry_run:
