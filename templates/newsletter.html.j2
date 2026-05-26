@@ -5,37 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }}</title>
   </head>
-  <body style="margin:0;padding:0;background:#f6f7f9;color:#1d2433;font-family:Arial,Helvetica,sans-serif;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f7f9;padding:28px 12px;">
+  <body style="margin:0;padding:0;background:#f5f6f8;color:#1d2433;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f6f8;padding:28px 12px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
             <tr>
-              <td style="padding:28px 28px 24px 28px;background:#111827;color:#ffffff;">
+              <td style="padding:30px 30px 26px 30px;background:#111827;color:#ffffff;">
                 <div style="font-size:13px;line-height:18px;color:#cbd5e1;">{{ generated_on }}</div>
-                <h1 style="margin:8px 0 8px 0;font-size:28px;line-height:34px;font-weight:700;">{{ title }}</h1>
-                <p style="margin:0;font-size:15px;line-height:23px;color:#dbe4f0;">{{ description }}</p>
+                <h1 style="margin:8px 0 8px 0;font-size:31px;line-height:38px;font-weight:700;letter-spacing:0;">{{ title }}</h1>
+                <p style="margin:0;font-size:16px;line-height:24px;color:#dbe4f0;">{{ description }}</p>
               </td>
             </tr>
             <tr>
-              <td style="padding:8px 28px 28px 28px;">
+              <td style="padding:24px 30px 6px 30px;">
+                <div style="font-size:13px;line-height:18px;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;font-weight:700;">Today's Signals</div>
+                <p style="margin:8px 0 0 0;font-size:15px;line-height:24px;color:#4b5563;">A focused brief of the most useful AI, technology, and product stories worth your attention today.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 30px 30px 30px;">
                 {% for story in stories %}
-                <article style="padding:22px 0;border-bottom:1px solid #edf0f4;">
-                  <div style="margin-bottom:8px;font-size:12px;line-height:18px;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;font-weight:700;">{{ story.source }}</div>
-                  <h2 style="margin:0 0 10px 0;font-size:20px;line-height:27px;color:#111827;">{{ story.title }}</h2>
-                  <p style="margin:0 0 14px 0;font-size:15px;line-height:24px;color:#374151;">{{ story.summary }}</p>
-                  <a href="{{ story.link }}" style="display:inline-block;color:#2563eb;font-size:15px;line-height:22px;font-weight:700;text-decoration:none;">Read more</a>
+                <article style="padding:24px 0;border-bottom:1px solid #edf0f4;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                    <tr>
+                      <td style="padding:0 0 10px 0;">
+                        <span style="display:inline-block;margin:0 8px 8px 0;padding:4px 9px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:11px;line-height:16px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">{{ story.category|default('Highlights') }}</span>
+                        <span style="display:inline-block;margin:0 0 8px 0;color:#64748b;font-size:12px;line-height:16px;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;">{{ story.source }}</span>
+                      </td>
+                    </tr>
+                  </table>
+                  <h2 style="margin:0 0 11px 0;font-size:23px;line-height:30px;color:#111827;font-weight:700;letter-spacing:0;">{{ story.title }}</h2>
+                  <p style="margin:0 0 16px 0;font-size:16px;line-height:27px;color:#374151;">{{ story.summary }}</p>
+                  <a href="{{ story.link }}" style="display:inline-block;color:#2563eb;font-size:15px;line-height:22px;font-weight:700;text-decoration:none;">Read the full story</a>
                 </article>
                 {% endfor %}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 28px 8px 28px;background:#f9fafb;color:#6b7280;font-size:12px;line-height:18px;">
+              <td style="padding:20px 30px 8px 30px;background:#f9fafb;color:#6b7280;font-size:12px;line-height:18px;">
                 Curated from RSS feeds and summarized for busy builders.
               </td>
             </tr>
             <tr>
-              <td style="padding:0 28px 24px 28px;background:#f9fafb;color:#4b5563;font-size:13px;line-height:20px;">
+              <td style="padding:0 30px 26px 30px;background:#f9fafb;color:#4b5563;font-size:13px;line-height:20px;">
                 {{ footer_text }}
               </td>
             </tr>

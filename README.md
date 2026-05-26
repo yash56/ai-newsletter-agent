@@ -4,10 +4,12 @@ A Python newsletter agent that reads trusted RSS feeds, asks Gemini to pick and 
 
 ## What it does
 
-- Reads RSS feeds with `feedparser` from TechCrunch, Hacker News, MIT Technology Review, Lenny's Newsletter, and The Batch by DeepLearning.AI.
+- Reads RSS feeds with `feedparser` from TechCrunch, Hacker News, MIT Technology Review, Lenny's Newsletter, The Batch by DeepLearning.AI, OpenAI, Anthropic, Google AI, Google Cloud, GitHub AI & ML, Microsoft Developer Blog, The New Stack, and VentureBeat AI.
 - Uses the Gemini API to pick up to 8 relevant fresh stories and write a two-sentence plain-English summary for each.
 - Filters stories to the last 24 hours by default, then skips links that were already sent.
 - Applies a quality gate before Gemini selection, so weakly related or vague posts are less likely to appear.
+- Favors official AI lab updates, developer-tool news, research, agentic AI, and practical Product Management stories.
+- Adds simple category labels such as Research, Code & Tools, Product Updates, Risk & Governance, Events, and Product Thinking.
 - Limits the newsletter to at most two stories from any one source.
 - Renders an HTML email from `templates/newsletter.html.j2`.
 - Sends one email per subscriber using the Resend Python SDK.
@@ -144,7 +146,9 @@ The newsletter keeps a balanced mix of sources and clearer summaries by default:
 - `NEWSLETTER_DESCRIPTION`: defaults to `Tech · AI · Product - Explained simply every morning!`
 - `NEWSLETTER_FOOTER_TEXT`: defaults to a short subscriber thank-you and reply-for-issues note
 
-The quality gate favors stories with a clear AI, agentic AI, technology, or Product Management angle. It rejects low-signal Hacker News patterns like `Ask HN` and raises the relevance threshold for Hacker News because those items often have thinner RSS context.
+The quality gate favors stories with a clear AI, agentic AI, technology, developer-tool, research, or Product Management angle. It rejects low-signal Hacker News patterns like `Ask HN` and raises the relevance threshold for Hacker News because those items often have thinner RSS context.
+
+The upgraded source mix is inspired by stronger AI briefs: more official lab/product updates, more developer tooling, more research, and fewer generic discussion links. The template now adds a short intro and category badges so readers can quickly scan what each item is about.
 
 Each Gemini summary is prompted to use two complete, short, simple sentences: the first explains the latest news clearly, and the second explains why it matters in practical terms. The agent rejects incomplete summaries, removes common RSS noise like watch/listen/read prompts, and strips confusing Hacker News placeholders such as `Comments` before rendering the email.
 
@@ -188,6 +192,14 @@ Feed URLs can be overridden with:
 - `MIT_TECH_REVIEW_RSS_URL`
 - `LENNYS_NEWSLETTER_RSS_URL`
 - `THE_BATCH_RSS_URL`
+- `OPENAI_NEWS_RSS_URL`
+- `ANTHROPIC_NEWS_RSS_URL`
+- `GOOGLE_AI_BLOG_RSS_URL`
+- `GOOGLE_CLOUD_AI_RSS_URL`
+- `GITHUB_AI_RSS_URL`
+- `MICROSOFT_DEV_BLOG_RSS_URL`
+- `THE_NEW_STACK_RSS_URL`
+- `VENTUREBEAT_AI_RSS_URL`
 
 ## Notes
 
