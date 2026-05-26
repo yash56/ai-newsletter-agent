@@ -264,11 +264,12 @@ def filter_quality_stories(candidates: list[agent.StoryCandidate]) -> list[agent
 
 
 def clean_display_title(title: str) -> str:
-    cleaned = agent.remove_rss_noise(title)
-    if " | " in cleaned:
-        left, right = cleaned.rsplit(" | ", 1)
+    raw_title = agent.clean_text(title, max_chars=220)
+    if " | " in raw_title:
+        left, right = raw_title.rsplit(" | ", 1)
         if 1 <= len(right.split()) <= 5:
-            cleaned = left
+            raw_title = left
+    cleaned = agent.remove_rss_noise(raw_title)
     return cleaned.strip() or title
 
 
