@@ -10,6 +10,7 @@ from quality_newsletter_agent import (
     filter_quality_stories,
     has_core_relevance,
     quality_score,
+    remove_rss_noise,
 )
 
 
@@ -80,6 +81,16 @@ class QualityNewsletterAgentTests(unittest.TestCase):
 
         self.assertEqual(filter_quality_stories([story]), [])
 
+    def test_filter_quality_stories_rejects_the_download_roundup(self) -> None:
+        story = make_candidate(
+            1,
+            "MIT Technology Review",
+            "The Download: keeping up with AI, and the future of IVF",
+            "This is today's edition of The Download, our weekday newsletter.",
+        )
+
+        self.assertEqual(filter_quality_stories([story]), [])
+
     def test_quality_score_rewards_specific_ai_context(self) -> None:
         weak_story = make_candidate(
             1,
@@ -116,6 +127,29 @@ class QualityNewsletterAgentTests(unittest.TestCase):
 
         self.assertEqual(enhanced[0].title, "Spec-driven development: The AI engineering workflow at Notion")
         self.assertEqual(enhanced[0].category, "Code & Tools")
+
+    def test_enhance_newsletter_stories_preserves_apostrophes_and_rewrites_weak_summary(self) -> None:
+        story = NewsletterStory(
+            source="TechCrunch",
+            title="Why Google’s AI can’t spell Google (or anything else)",
+            link="https://example.com/google-ai-spelling",
+            published="2026-05-28",
+            summary="Google is embarrassing itself, again. The key takeaway is what this could change for teams, customers, products, or the tools people choose next.",
+        )
+
+        enhanced = enhance_newsletter_stories([story])
+
+        self.assertEqual(enhanced[0].title, "Why Google's AI can't spell Google (or anything else)")
+        self.assertTrue(enhanced[0].summary.startswith("This story explains why Google's AI can't spell"))
+        self.assertNotIn("embarrassing itself", enhanced[0].summary)
+
+    def test_remove_rss_noise_drops_mit_newsletter_boilerplate(self) -> None:
+        text = (
+            "This is today’s edition of The Download, our weekday newsletter that provides a daily dose "
+            "of what’s going on in the world of technology. Stay on top of what’s going on in AI this summer."
+        )
+
+        self.assertEqual(remove_rss_noise(text), "")
 
 
 if __name__ == "__main__":
