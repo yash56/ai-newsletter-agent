@@ -2,11 +2,40 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 import fresh_newsletter_agent as fresh
 import newsletter_agent as agent
+
+_ORIGINAL_CLEAN_TEXT = agent.clean_text
+_ORIGINAL_REMOVE_RSS_NOISE = agent.remove_rss_noise
+
+SMART_PUNCTUATION_TRANSLATION = str.maketrans(
+    {
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201a": "'",
+        "\u201b": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u201e": '"',
+        "\u201f": '"',
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2212": "-",
+        "\u00a0": " ",
+        "\u2026": "...",
+    }
+)
+
+BOILERPLATE_PATTERNS = (
+    r"^this is today's edition of the download\b.*",
+    r"\bstay on top of what's going on in ai this summer\b.*",
+    r"\bhere at mit technology review, we understand exactly how relentless\b.*",
+    r"^our weekday newsletter\b.*",
+)
 
 ENHANCED_FEEDS = {
     "OpenAI News": "https://openai.com/news/rss.xml",
@@ -87,6 +116,7 @@ LOW_SIGNAL_TITLE_PREFIXES = (
     "show hn:",
     "tell hn:",
     "launch hn:",
+    "the download:",
     "who is hiring",
     "who wants to be hired",
 )
@@ -186,7 +216,31 @@ class EnhancedNewsletterStory:
     category: str
 
 
+def normalize_punctuation(value: str | None) -> str:
+    if not value:
+        return ""
+    return str(value).translate(SMART_PUNCTUATION_TRANSLATION)
+
+
+def clean_text(value: str | None, max_chars: int = 700) -> str:
+    return _ORIGINAL_CLEAN_TEXT(normalize_punctuation(value), max_chars=max_chars)
+
+
+def remove_boilerplate(text: str) -> str:
+    cleaned = text
+    for pattern in BOILERPLATE_PATTERNS:
+        cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE).strip()
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def remove_rss_noise(value: str) -> str:
+    text = _ORIGINAL_REMOVE_RSS_NOISE(normalize_punctuation(value))
+    return remove_boilerplate(text)
+
+
 def configure_quality_sources() -> None:
+    agent.clean_text = clean_text
+    agent.remove_rss_noise = remove_rss_noise
     agent.DEFAULT_FEEDS.update(ENHANCED_FEEDS)
     agent.FEED_ENV_OVERRIDES.update(ENHANCED_FEED_ENV_OVERRIDES)
     agent.SOURCE_BONUSES.update(ENHANCED_SOURCE_BONUSES)
@@ -264,12 +318,12 @@ def filter_quality_stories(candidates: list[agent.StoryCandidate]) -> list[agent
 
 
 def clean_display_title(title: str) -> str:
-    raw_title = agent.clean_text(title, max_chars=220)
+    raw_title = clean_text(title, max_chars=220)
     if " | " in raw_title:
         left, right = raw_title.rsplit(" | ", 1)
         if 1 <= len(right.split()) <= 5:
             raw_title = left
-    cleaned = agent.remove_rss_noise(raw_title)
+    cleaned = remove_rss_noise(raw_title)
     return cleaned.strip() or title
 
 
@@ -285,18 +339,56 @@ def infer_category(story: agent.NewsletterStory) -> str:
     return "Highlights"
 
 
-def enhance_newsletter_stories(stories: list[agent.NewsletterStory]) -> list[EnhancedNewsletterStory]:
-    return [
-        EnhancedNewsletterStory(
-            source=story.source,
-            title=clean_display_title(story.title),
-            link=story.link,
-            published=story.published,
-            summary=story.summary,
-            category=infer_category(story),
+def starts_with_vowel_sound(value: str) -> bool:
+    return bool(value) and value[0].lower() in {"a", "e", "i", "o", "u"}
+
+
+def sentence_from_title(title: str) -> str:
+    lower_title = title[:1].lower() + title[1:]
+    article = "an" if starts_with_vowel_sound(lower_title) else "a"
+    return f"This story explains {article} {lower_title}."
+
+
+def practical_impact_sentence(title: str, summary: str) -> str:
+    text = f"{title} {summary}".lower()
+    if any(word in text for word in ("spell", "misspell", "accuracy", "hallucination", "reliability")):
+        return "For product teams, it is a reminder that AI features need quality checks before users trust the output."
+    if any(word in text for word in ("download", "newsletter", "roundup")):
+        return "For readers, the useful point is to focus on the specific AI or product update rather than the newsletter promotion around it."
+    return agent.DEFAULT_SUMMARY_FALLBACK
+
+
+def polish_summary(story: agent.NewsletterStory, title: str) -> str:
+    summary = remove_rss_noise(story.summary)
+    lowered = summary.lower()
+    if not summary or any(
+        phrase in lowered
+        for phrase in (
+            "embarrassing itself",
+            "this is today's edition of the download",
+            "stay on top of what's going on in ai this summer",
+            "the key takeaway is what this could change",
         )
-        for story in stories
-    ]
+    ):
+        return f"{sentence_from_title(title)} {practical_impact_sentence(title, summary)}"
+    return summary
+
+
+def enhance_newsletter_stories(stories: list[agent.NewsletterStory]) -> list[EnhancedNewsletterStory]:
+    enhanced_stories: list[EnhancedNewsletterStory] = []
+    for story in stories:
+        title = clean_display_title(story.title)
+        enhanced_stories.append(
+            EnhancedNewsletterStory(
+                source=story.source,
+                title=title,
+                link=story.link,
+                published=story.published,
+                summary=polish_summary(story, title),
+                category=infer_category(story),
+            )
+        )
+    return enhanced_stories
 
 
 def run(dry_run: bool = False, preview_file: Path | None = None) -> None:
