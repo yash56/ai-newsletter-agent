@@ -345,6 +345,8 @@ def starts_with_vowel_sound(value: str) -> bool:
 
 def sentence_from_title(title: str) -> str:
     lower_title = title[:1].lower() + title[1:]
+    if lower_title.startswith(("why ", "how ", "what ", "when ", "where ", "who ")):
+        return f"This story explains {lower_title}."
     article = "an" if starts_with_vowel_sound(lower_title) else "a"
     return f"This story explains {article} {lower_title}."
 
