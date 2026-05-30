@@ -5,6 +5,7 @@ from unittest.mock import patch
 import newsletter_agent as agent
 from newsletter_agent import NewsletterStory, StoryCandidate
 from quality_newsletter_agent import (
+    clean_display_title,
     configure_quality_sources,
     enhance_newsletter_stories,
     filter_quality_stories,
@@ -91,6 +92,16 @@ class QualityNewsletterAgentTests(unittest.TestCase):
 
         self.assertEqual(filter_quality_stories([story]), [])
 
+    def test_filter_quality_stories_rejects_google_ai_quiz_demo(self) -> None:
+        story = make_candidate(
+            1,
+            "Google AI Blog",
+            "Take our I/O 2026 quiz, vibe coded in Google AI Studio.",
+            "Try a fun quiz made with Gemini and Google AI Studio.",
+        )
+
+        self.assertEqual(filter_quality_stories([story]), [])
+
     def test_quality_score_rewards_specific_ai_context(self) -> None:
         weak_story = make_candidate(
             1,
@@ -131,7 +142,7 @@ class QualityNewsletterAgentTests(unittest.TestCase):
     def test_enhance_newsletter_stories_preserves_apostrophes_and_rewrites_weak_summary(self) -> None:
         story = NewsletterStory(
             source="TechCrunch",
-            title="Why Google’s AI can’t spell Google (or anything else)",
+            title="Why Google\u2019s AI can\u2019t spell Google (or anything else)",
             link="https://example.com/google-ai-spelling",
             published="2026-05-28",
             summary="Google is embarrassing itself, again. The key takeaway is what this could change for teams, customers, products, or the tools people choose next.",
@@ -140,13 +151,47 @@ class QualityNewsletterAgentTests(unittest.TestCase):
         enhanced = enhance_newsletter_stories([story])
 
         self.assertEqual(enhanced[0].title, "Why Google's AI can't spell Google (or anything else)")
-        self.assertTrue(enhanced[0].summary.startswith("This story explains why Google's AI can't spell"))
+        self.assertIn("quality checks", enhanced[0].summary)
         self.assertNotIn("embarrassing itself", enhanced[0].summary)
+        self.assertNotIn("The key takeaway", enhanced[0].summary)
+        self.assertNotIn("This story explains", enhanced[0].summary)
+
+    def test_clean_display_title_simplifies_groq_funding_headline(self) -> None:
+        title = "After Nvidia's $20B not-acqui-hire, AI chip startup Groq reportedly raising $650M"
+
+        self.assertEqual(
+            clean_display_title(title),
+            "Groq reportedly raising $650M as AI chip competition heats up",
+        )
+
+    def test_enhance_newsletter_stories_rewrites_generic_funding_summary(self) -> None:
+        story = NewsletterStory(
+            source="TechCrunch",
+            title="After Nvidia's $20B not-acqui-hire, AI chip startup Groq reportedly raising $650M",
+            link="https://example.com/groq-funding",
+            published="2026-05-30",
+            summary=(
+                "This story explains an after Nvidia's $20B not-acqui-hire, AI chip startup Groq "
+                "reportedly raising $650M. The key takeaway is what this could change for teams, "
+                "customers, products, or the tools people choose next."
+            ),
+        )
+
+        enhanced = enhance_newsletter_stories([story])
+
+        self.assertEqual(
+            enhanced[0].title,
+            "Groq reportedly raising $650M as AI chip competition heats up",
+        )
+        self.assertIn("AI chips", enhanced[0].summary)
+        self.assertIn("scarce talent", enhanced[0].summary)
+        self.assertNotIn("The key takeaway", enhanced[0].summary)
+        self.assertNotIn("This story explains", enhanced[0].summary)
 
     def test_remove_rss_noise_drops_mit_newsletter_boilerplate(self) -> None:
         text = (
-            "This is today’s edition of The Download, our weekday newsletter that provides a daily dose "
-            "of what’s going on in the world of technology. Stay on top of what’s going on in AI this summer."
+            "This is today\u2019s edition of The Download, our weekday newsletter that provides a daily dose "
+            "of what\u2019s going on in the world of technology. Stay on top of what\u2019s going on in AI this summer."
         )
 
         self.assertEqual(remove_rss_noise(text), "")
