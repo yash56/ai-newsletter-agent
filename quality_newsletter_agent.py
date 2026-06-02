@@ -139,6 +139,23 @@ LOW_SIGNAL_PHRASES = (
     "thread",
 )
 
+GENERIC_TEMPLATE_PHRASES = (
+    "the key takeaway",
+    "the main takeaway",
+    "what this could change",
+    "for product teams",
+    "for builders",
+    "for readers",
+    "for leaders",
+    "the important question is whether",
+    "the useful signal is",
+    "this story explains",
+    "this brief highlights",
+    "this matters because",
+    "creates a clearer, faster, or cheaper way",
+    "teams, customers, products, or the tools people choose next",
+)
+
 CATEGORY_RULES = (
     (
         "Research",
@@ -360,86 +377,41 @@ def infer_category(story: agent.NewsletterStory) -> str:
     return "Highlights"
 
 
-def starts_with_vowel_sound(value: str) -> bool:
-    return bool(value) and value[0].lower() in {"a", "e", "i", "o", "u"}
+def normalized_words(value: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", normalize_punctuation(value).lower())
 
 
-def lower_first_character(value: str) -> str:
-    if not value:
-        return ""
-    return value[:1].lower() + value[1:]
+def summary_echoes_title(summary: str, title: str) -> bool:
+    summary_words = normalized_words(summary)
+    title_words = normalized_words(title)
+    if not summary_words or not title_words:
+        return False
+
+    normalized_summary = " ".join(summary_words)
+    normalized_title = " ".join(title_words)
+    if normalized_summary.startswith(normalized_title):
+        return True
+
+    overlap = len(set(summary_words[: min(len(summary_words), len(title_words) + 3)]) & set(title_words))
+    return overlap >= max(5, int(len(set(title_words)) * 0.75))
 
 
-def sentence_from_title(title: str) -> str:
-    clean_title = title.strip().rstrip(".")
-    lower_title = clean_title.lower()
-
-    if not clean_title:
-        return ""
-    if "groq" in lower_title and "raising" in lower_title and "chip" in lower_title:
-        return "Groq is reportedly raising $650 million as demand for AI chips and chip talent keeps intensifying."
-    if "google ai studio" in lower_title and ("quiz" in lower_title or "vibe coded" in lower_title):
-        return "Google shared an I/O 2026 quiz built with Google AI Studio as a light demo of its app-building tools."
-    if any(word in lower_title for word in ("reportedly", "raises", "raising", "funding", "acquires")):
-        news = lower_first_character(clean_title)
-        news = re.sub(r"\breportedly raising\b", "is reportedly raising", news, flags=re.IGNORECASE)
-        return agent.ensure_sentence(f"The report says {news}")
-    if lower_title.startswith("why "):
-        return agent.ensure_sentence(f"The story examines {lower_first_character(clean_title)}")
-    if lower_title.startswith("how "):
-        return agent.ensure_sentence(f"The story explains {lower_first_character(clean_title)}")
-    if lower_title.startswith("what "):
-        return agent.ensure_sentence(f"The story explains {lower_first_character(clean_title)}")
-
-    return agent.ensure_sentence(clean_title)
+def has_generic_template_phrase(summary: str) -> bool:
+    lowered = normalize_punctuation(summary).lower()
+    return any(phrase in lowered for phrase in GENERIC_TEMPLATE_PHRASES)
 
 
-def practical_impact_sentence(title: str, summary: str) -> str:
-    text = f"{title} {summary}".lower()
-    if any(word in text for word in ("groq", "nvidia", "chip", "semiconductor", "gpu")) and any(
-        word in text for word in ("funding", "raising", "acqui-hire", "acquisition")
-    ):
-        return (
-            "For readers, the bigger signal is that AI hardware remains a high-stakes market, "
-            "with investors and large tech companies competing for scarce talent and capacity."
-        )
-    if "google ai studio" in text and any(word in text for word in ("quiz", "vibe coded")):
-        return (
-            "It is a lightweight demo rather than major industry news, so it should be skipped "
-            "when stronger AI or product stories are available."
-        )
-    if any(word in text for word in ("spell", "misspell", "accuracy", "hallucination", "reliability")):
-        return "For product teams, it is a reminder that AI features need quality checks before users trust the output."
-    if any(word in text for word in ("download", "newsletter", "roundup")):
-        return "For readers, the useful point is to focus on the specific AI or product update rather than the newsletter promotion around it."
-    if any(word in text for word in ("agent", "workflow", "automation", "developer", "coding")):
-        return "For builders, the practical signal is how AI is changing daily work, tooling choices, and delivery speed."
-    if any(word in text for word in ("model", "launch", "api", "tool", "studio", "platform")):
-        return "For product teams, the important question is whether this creates a clearer, faster, or cheaper way to build useful AI features."
-    if any(word in text for word in ("policy", "regulation", "safety", "security", "risk")):
-        return "For leaders, it is worth watching because rules, safety expectations, and trust can shape which AI products users adopt."
-    return "For readers, the useful signal is what changed, who is affected, and whether it points to a real shift in AI or product strategy."
-
-
-def is_weak_summary(summary: str) -> bool:
-    lowered = summary.lower()
-    weak_phrases = (
-        "embarrassing itself",
-        "this is today's edition of the download",
-        "stay on top of what's going on in ai this summer",
-        "the key takeaway is what this could change",
-        "this story explains",
-        "this brief highlights",
-        "this matters because it could affect how teams build",
-        "for product managers and builders, this means preparing for",
-    )
-    return not summary or any(phrase in lowered for phrase in weak_phrases)
+def is_weak_summary(summary: str, title: str) -> bool:
+    cleaned_summary = remove_rss_noise(summary)
+    if len(agent.split_sentences(cleaned_summary)) < 2:
+        return True
+    return has_generic_template_phrase(cleaned_summary) or summary_echoes_title(cleaned_summary, title)
 
 
 def polish_summary(story: agent.NewsletterStory, title: str) -> str:
     summary = remove_rss_noise(story.summary)
-    if is_weak_summary(summary):
-        return f"{sentence_from_title(title)} {practical_impact_sentence(title, summary)}".strip()
+    if is_weak_summary(summary, title):
+        return ""
     return summary
 
 
@@ -447,16 +419,22 @@ def enhance_newsletter_stories(stories: list[agent.NewsletterStory]) -> list[Enh
     enhanced_stories: list[EnhancedNewsletterStory] = []
     for story in stories:
         title = clean_display_title(story.title)
+        summary = polish_summary(story, title)
+        if not summary:
+            print(f"Warning: skipped low-quality summary for {story.source}: {title}")
+            continue
         enhanced_stories.append(
             EnhancedNewsletterStory(
                 source=story.source,
                 title=title,
                 link=story.link,
                 published=story.published,
-                summary=polish_summary(story, title),
+                summary=summary,
                 category=infer_category(story),
             )
         )
+    if not enhanced_stories:
+        raise RuntimeError("All selected stories had weak summaries, so the newsletter was not sent.")
     return enhanced_stories
 
 

@@ -10,6 +10,7 @@ from quality_newsletter_agent import (
     enhance_newsletter_stories,
     filter_quality_stories,
     has_core_relevance,
+    polish_summary,
     quality_score,
     remove_rss_noise,
 )
@@ -131,30 +132,13 @@ class QualityNewsletterAgentTests(unittest.TestCase):
             title="Spec-driven development: The AI engineering workflow at Notion | Ryan Nystrom",
             link="https://example.com/story",
             published="2026-05-25",
-            summary="Notion uses Claude Code and AI agents to automate engineering workflows. This matters because product teams can move faster when specs and implementation stay connected.",
+            summary="Notion uses Claude Code and AI agents to automate engineering workflows. The workflow connects written specs to implementation so engineering teams can ship changes with less manual coordination.",
         )
 
         enhanced = enhance_newsletter_stories([story])
 
         self.assertEqual(enhanced[0].title, "Spec-driven development: The AI engineering workflow at Notion")
         self.assertEqual(enhanced[0].category, "Code & Tools")
-
-    def test_enhance_newsletter_stories_preserves_apostrophes_and_rewrites_weak_summary(self) -> None:
-        story = NewsletterStory(
-            source="TechCrunch",
-            title="Why Google\u2019s AI can\u2019t spell Google (or anything else)",
-            link="https://example.com/google-ai-spelling",
-            published="2026-05-28",
-            summary="Google is embarrassing itself, again. The key takeaway is what this could change for teams, customers, products, or the tools people choose next.",
-        )
-
-        enhanced = enhance_newsletter_stories([story])
-
-        self.assertEqual(enhanced[0].title, "Why Google's AI can't spell Google (or anything else)")
-        self.assertIn("quality checks", enhanced[0].summary)
-        self.assertNotIn("embarrassing itself", enhanced[0].summary)
-        self.assertNotIn("The key takeaway", enhanced[0].summary)
-        self.assertNotIn("This story explains", enhanced[0].summary)
 
     def test_clean_display_title_simplifies_groq_funding_headline(self) -> None:
         title = "After Nvidia's $20B not-acqui-hire, AI chip startup Groq reportedly raising $650M"
@@ -164,29 +148,49 @@ class QualityNewsletterAgentTests(unittest.TestCase):
             "Groq reportedly raising $650M as AI chip competition heats up",
         )
 
-    def test_enhance_newsletter_stories_rewrites_generic_funding_summary(self) -> None:
+    def test_polish_summary_rejects_headline_echo_and_template_copy(self) -> None:
         story = NewsletterStory(
-            source="TechCrunch",
-            title="After Nvidia's $20B not-acqui-hire, AI chip startup Groq reportedly raising $650M",
-            link="https://example.com/groq-funding",
-            published="2026-05-30",
+            source="The New Stack",
+            title="OpenAI, Anthropic, Google, Amazon, and xAI all fail on type of attack, study finds",
+            link="https://example.com/ai-safety-study",
+            published="2026-06-01",
             summary=(
-                "This story explains an after Nvidia's $20B not-acqui-hire, AI chip startup Groq "
-                "reportedly raising $650M. The key takeaway is what this could change for teams, "
-                "customers, products, or the tools people choose next."
+                "OpenAI, Anthropic, Google, Amazon, and xAI all fail on type of attack, study finds. "
+                "For product teams, the important question is whether this creates a clearer, faster, "
+                "or cheaper way to build useful AI features."
             ),
         )
 
-        enhanced = enhance_newsletter_stories([story])
+        self.assertEqual(polish_summary(story, story.title), "")
 
-        self.assertEqual(
-            enhanced[0].title,
-            "Groq reportedly raising $650M as AI chip competition heats up",
+    def test_enhance_newsletter_stories_skips_bad_summary_and_keeps_good_one(self) -> None:
+        bad_story = NewsletterStory(
+            source="The New Stack",
+            title="OpenAI, Anthropic, Google, Amazon, and xAI all fail on type of attack, study finds",
+            link="https://example.com/bad-ai-safety-study",
+            published="2026-06-01",
+            summary=(
+                "OpenAI, Anthropic, Google, Amazon, and xAI all fail on type of attack, study finds. "
+                "For product teams, the important question is whether this creates a clearer, faster, "
+                "or cheaper way to build useful AI features."
+            ),
         )
-        self.assertIn("AI chips", enhanced[0].summary)
-        self.assertIn("scarce talent", enhanced[0].summary)
-        self.assertNotIn("The key takeaway", enhanced[0].summary)
-        self.assertNotIn("This story explains", enhanced[0].summary)
+        good_story = NewsletterStory(
+            source="The New Stack",
+            title="Cisco study finds multi-turn attacks expose gaps in frontier AI safety tests",
+            link="https://example.com/good-ai-safety-study",
+            published="2026-06-01",
+            summary=(
+                "Cisco tested 15 frontier AI models and found that all of them were vulnerable to multi-turn attacks, where an attacker gradually pressures the model across several messages. "
+                "The study says one-shot safety tests can miss these risks, so companies should test models in longer conversations before using them in production."
+            ),
+        )
+
+        enhanced = enhance_newsletter_stories([bad_story, good_story])
+
+        self.assertEqual(len(enhanced), 1)
+        self.assertEqual(enhanced[0].link, "https://example.com/good-ai-safety-study")
+        self.assertIn("Cisco tested 15 frontier AI models", enhanced[0].summary)
 
     def test_remove_rss_noise_drops_mit_newsletter_boilerplate(self) -> None:
         text = (
