@@ -10,6 +10,7 @@ from quality_newsletter_agent import (
     enhance_newsletter_stories,
     filter_quality_stories,
     has_core_relevance,
+    parse_global_ai_issue_items,
     polish_summary,
     quality_score,
     remove_rss_noise,
@@ -125,6 +126,22 @@ class QualityNewsletterAgentTests(unittest.TestCase):
         self.assertIn("OpenAI News", agent.configured_feeds())
         self.assertIn("Anthropic News", agent.configured_feeds())
         self.assertIn("GitHub AI & ML", agent.configured_feeds())
+        self.assertIn("Microsoft Tech Community AI", agent.configured_feeds())
+
+    def test_global_ai_weekly_parser_extracts_allowed_article_items(self) -> None:
+        html = """
+        <h2><a href="https://techcommunity.microsoft.com/t5/ai/post">AI Agents Just Became the New Security Frontier</a></h2>
+        <p>Microsoft explains how agentic AI changes visibility, governance, and security controls.</p>
+        <h2><a href="https://unrelated.example.com/post">Ignore me</a></h2>
+        <p>This item is not on the allowed domain list.</p>
+        """
+
+        items = parse_global_ai_issue_items("https://globalai.community/weekly/153/", html)
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].title, "AI Agents Just Became the New Security Frontier")
+        self.assertEqual(items[0].link, "https://techcommunity.microsoft.com/t5/ai/post")
+        self.assertIn("agentic AI changes visibility", items[0].description)
 
     def test_enhance_newsletter_stories_adds_category_and_cleans_title(self) -> None:
         story = NewsletterStory(
@@ -158,6 +175,21 @@ class QualityNewsletterAgentTests(unittest.TestCase):
                 "OpenAI, Anthropic, Google, Amazon, and xAI all fail on type of attack, study finds. "
                 "For product teams, the important question is whether this creates a clearer, faster, "
                 "or cheaper way to build useful AI features."
+            ),
+        )
+
+        self.assertEqual(polish_summary(story, story.title), "")
+
+    def test_polish_summary_rejects_product_business_fallback_copy(self) -> None:
+        story = NewsletterStory(
+            source="TechCrunch",
+            title="Google just fired a warning shot in the AI subscription price wars",
+            link="https://example.com/google-ai-price-war",
+            published="2026-06-13",
+            summary=(
+                "Google just made it significantly cheaper to enjoy its budget AI subscription tier. "
+                "For product and business teams, it is a reminder to look closely at cost, trade-offs, "
+                "and where the technology creates real value."
             ),
         )
 
